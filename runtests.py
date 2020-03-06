@@ -20,5 +20,6 @@ def runtests():
     failures = test_runner.run_tests(['rest_auth'])
     sys.exit(bool(failures))
 
+
 if __name__ == '__main__':
     runtests()
