@@ -20,7 +20,7 @@ def _process_signup(request, sociallogin):
         sociallogin)
     if not auto_signup:
         request.session['socialaccount_sociallogin'] = sociallogin.serialize()
-        Response({
+        ret = Response({
             "detail": "User must register a new account",
             "register": True
         })
