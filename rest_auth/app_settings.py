@@ -13,19 +13,6 @@ from .utils import import_callable, default_create_token
 create_token = import_callable(
     getattr(settings, 'REST_AUTH_TOKEN_CREATOR', default_create_token))
 
-views = getattr(settings, 'REST_AUTH_VIEWS', {})
-
-
-def get_login_view():
-    # prevent circular import
-    from .views import LoginView
-    return import_callable(
-        views.get('LOGIN_VIEW', LoginView)
-    )
-
-
-LoginView = get_login_view()
-
 serializers = getattr(settings, 'REST_AUTH_SERIALIZERS', {})
 
 TokenSerializer = import_callable(
