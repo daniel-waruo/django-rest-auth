@@ -1,6 +1,8 @@
+from allauth import app_settings
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest
 from django.utils.translation import ugettext_lazy as _
+from rest_framework.fields import empty
 
 try:
     from allauth.account import app_settings as allauth_settings
@@ -216,3 +218,23 @@ class RegisterSerializer(serializers.Serializer):
 
 class VerifyEmailSerializer(serializers.Serializer):
     key = serializers.CharField()
+
+
+class SocialSignUpSerializer(RegisterSerializer):
+
+    def __init__(self, instance=None, data=empty, **kwargs):
+        super().__init__(instance, data, **kwargs)
+        self.sociallogin = kwargs.pop('sociallogin')
+        initial = get_adapter().get_signup_form_initial_data(
+            self.sociallogin)
+        self.initial_data.update({
+            'initial': initial,
+            'email_required': kwargs.get('email_required',
+                                         app_settings.EMAIL_REQUIRED)})
+
+    def save(self, request):
+        adapter = get_adapter(request)
+        self.cleaned_data = self.get_cleaned_data()
+        user = adapter.save_user(request, self.sociallogin, self)
+        self.custom_signup(request, user)
+        return user

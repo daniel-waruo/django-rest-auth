@@ -5,12 +5,10 @@ from allauth.exceptions import ImmediateHttpResponse
 from allauth.socialaccount import app_settings, signals
 from allauth.socialaccount.adapter import get_adapter
 from allauth.socialaccount.models import SocialLogin
-from allauth.socialaccount.providers.base import AuthError, AuthProcess
+from allauth.socialaccount.providers.base import AuthProcess
 from django.contrib import messages
 from django.forms import ValidationError
 from django.http import HttpResponseRedirect
-from django.shortcuts import render
-from django.urls import reverse
 from rest_framework.response import Response
 
 
@@ -23,7 +21,7 @@ def _process_signup(request, sociallogin):
         ret = Response({
             "detail": "User must register a new account",
             "register": True
-        })
+        }, 200)
     else:
         # Ok, auto signup it is, at least the e-mail address is ok.
         # We still need to check the username though...
@@ -40,10 +38,10 @@ def _process_signup(request, sociallogin):
         if not get_adapter(request).is_open_for_signup(
                 request,
                 sociallogin):
-            return render(
-                request,
-                "account/signup_closed." +
-                account_settings.TEMPLATE_EXTENSION)
+            return Response({
+                "detail": "Signup closed",
+                "closed": True
+            }, 400)
         get_adapter(request).save_user(request, sociallogin, form=None)
         ret = complete_social_signup(request, sociallogin)
     return ret
@@ -56,45 +54,13 @@ def _login_social_account(request, sociallogin):
                          signal_kwargs={"sociallogin": sociallogin})
 
 
-def render_authentication_error(request,
-                                provider_id,
-                                error=AuthError.UNKNOWN,
-                                exception=None,
-                                extra_context=None):
-    try:
-        if extra_context is None:
-            extra_context = {}
-        get_adapter(request).authentication_error(
-            request,
-            provider_id,
-            error=error,
-            exception=exception,
-            extra_context=extra_context)
-    except ImmediateHttpResponse as e:
-        return e.response
-    if error == AuthError.CANCELLED:
-        return HttpResponseRedirect(reverse('socialaccount_login_cancelled'))
-    context = {
-        'auth_error': {
-            'provider': provider_id,
-            'code': error,
-            'exception': exception
-        }
-    }
-    context.update(extra_context)
-    return render(
-        request,
-        "socialaccount/authentication_error." +
-        account_settings.TEMPLATE_EXTENSION,
-        context
-    )
-
-
 def _add_social_account(request, sociallogin):
     if request.user.is_anonymous:
         # This should not happen. Simply redirect to the connections
         # view (which has a login required)
-        return HttpResponseRedirect(reverse('socialaccount_connections'))
+        return Response({
+            "detail": "Login to connect account"
+        }, 403)
     level = messages.INFO
     message = 'socialaccount/messages/account_connected.txt'
     action = None
@@ -122,10 +88,6 @@ def _add_social_account(request, sociallogin):
         signals.social_account_added.send(sender=SocialLogin,
                                           request=request,
                                           sociallogin=sociallogin)
-    default_next = get_adapter(request).get_connect_redirect_url(
-        request,
-        sociallogin.account)
-    next_url = sociallogin.get_redirect_url(request) or default_next
     get_account_adapter(request).add_message(
         request, level, message,
         message_context={
@@ -133,7 +95,9 @@ def _add_social_account(request, sociallogin):
             'action': action
         }
     )
-    return HttpResponseRedirect(next_url)
+    return Response({
+        "message": "Social Account connected Successfully",
+    })
 
 
 def complete_social_login(request, sociallogin):

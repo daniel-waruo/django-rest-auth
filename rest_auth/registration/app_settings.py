@@ -1,15 +1,19 @@
 from django.conf import settings
-
 from rest_framework.permissions import AllowAny
-from rest_auth.registration.serializers import (
-    RegisterSerializer as DefaultRegisterSerializer)
-from ..utils import import_callable
 
+from rest_auth.registration.serializers import (
+    RegisterSerializer as DefaultRegisterSerializer,
+    SocialSignUpSerializer as DefaultSocialRegisterSerializer
+)
+from ..utils import import_callable
 
 serializers = getattr(settings, 'REST_AUTH_REGISTER_SERIALIZERS', {})
 
 RegisterSerializer = import_callable(
     serializers.get('REGISTER_SERIALIZER', DefaultRegisterSerializer))
+
+SocialRegisterSerializer = import_callable(
+    serializers.get('SOCIAL_REGISTER_SERIALIZER', DefaultSocialRegisterSerializer))
 
 
 def register_permission_classes():
